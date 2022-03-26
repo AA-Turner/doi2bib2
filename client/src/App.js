@@ -2,8 +2,8 @@ import React, { Component } from 'react';
 import { BrowserRouter, Route, Switch } from 'react-router-dom';
 import PropTypes from 'prop-types';
 
-import Bib from './utils/Bib.js';
-import logo from './components/doi2bib-logo.png';
+import Bib from './Bib.js';
+import logo from './doi2bib-logo.png';
 import './code.css';
 
 class Code extends Component {
