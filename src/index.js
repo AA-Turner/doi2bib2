@@ -1,15 +1,6 @@
-import React, { Component } from 'react';
-import ReactDOM from 'react-dom';
-import { BrowserRouter, Route, Switch } from 'react-router-dom';
-import PropTypes from 'prop-types';
 import Bibparser from './bibparser.jison';
-import logo from './doi2bib-logo.png';
-import registerServiceWorker from './registerServiceWorker';
 
-import 'bootstrap/dist/css/bootstrap.css';
-import 'font-awesome/css/font-awesome.css';
-import './index.css';
-
+/* REQUESTS */
 
 const doi2bib = (doi) => fetch('https://doi.org/' + doi, {headers: {'Accept': 'application/x-bibtex; charset=utf-8'}}).then(response => {
   if (!response.ok) throw new Error(response.statusCode);
@@ -28,6 +19,8 @@ const arxivid2doi = (arxivid) => fetch('https://arxiv.org/bibtex/' + arxivid).th
   if (!response.ok) throw new Error(response.statusCode);
   return response.text()
 })
+
+/* BIBTEX PARSING */
 
 const SPECIAL_CHARS = {
   'à': '\\`a',
@@ -58,287 +51,126 @@ const encodeSpecialChars = (str) => str.replace(
 
 export default class Bib {
   constructor(bibStr) {
-    this.bib = Bibparser.parse(bibStr);
+  this.bib = Bibparser.parse(bibStr);
 
-    if (this.bib.tags.pages === 'n/a-n/a') {
-      delete this.bib.tags.pages;
+  if (this.bib.tags.pages === 'n/a-n/a') {
+    delete this.bib.tags.pages;
+  }
+  if (this.bib.tags.pages && this.bib.tags.pages.indexOf('--') === -1) {
+    this.bib.tags.pages = this.bib.tags.pages.replace(/-/g, '--');
+  }
+
+  /* id specific */
+  if (this.bib.id) {
+    this.bib.id = this.bib.id.replace(/_/g, '');
+  }
+
+  // bib url contains url encoding -> we decode those characters here
+  if (this.bib.tags.url) {
+    this.bib.tags.url = decodeURIComponent(this.bib.tags.url);
+  }
+
+  if (this.bib.tags.title) {
+    if (Array.isArray(this.bib.tags.title)) {
+    this.bib.tags.title = this.bib.tags.title.map(t => insertDollars(t))
+    } else {
+    this.bib.tags.title = insertDollars(this.bib.tags.title);
     }
-    if (this.bib.tags.pages && this.bib.tags.pages.indexOf('--') === -1) {
-      this.bib.tags.pages = this.bib.tags.pages.replace(/-/g, '--');
-    }
+  }
 
-    /* id specific */
-    if (this.bib.id) {
-      this.bib.id = this.bib.id.replace(/_/g, '');
-    }
-
-    // bib url contains url encoding -> we decode those characters here
-    if (this.bib.tags.url) {
-      this.bib.tags.url = decodeURIComponent(this.bib.tags.url);
-    }
-
-
-    if (this.bib.tags.title) {
-      if (Array.isArray(this.bib.tags.title)) {
-        this.bib.tags.title = this.bib.tags.title.map(t => insertDollars(t))
-      } else {
-        this.bib.tags.title = insertDollars(this.bib.tags.title);
-      }
-    }
-
-    // remove brackets from month
-    console.log(bibStr);
-    console.log(this.bib.tags.month);
+  // remove brackets from month
+  console.log(bibStr);
+  console.log(this.bib.tags.month);
   }
 
   toPrettyString() {
-    var result;
+  var result;
 
-    result = '@' + this.bib.type + '{' + this.bib.id;
+  result = '@' + this.bib.type + '{' + this.bib.id;
 
-    Object.keys(this.bib.tags).forEach(key => {
-      const useBrackets = !['month'].includes(key);
-      const value = this.bib.tags[key];
-      result += ',\n  ' + key + ' = ';
-      if (useBrackets) {
-        result += '{';
-      }
-      result += encodeSpecialChars(value.join ? value.join(', ') : value);
-      if (useBrackets) {
-        result += '}';
-      }
-    });
+  Object.keys(this.bib.tags).forEach(key => {
+    const useBrackets = !['month'].includes(key);
+    const value = this.bib.tags[key];
+    result += ',\n  ' + key + ' = ';
+    if (useBrackets) {
+    result += '{';
+    }
+    result += encodeSpecialChars(value.join ? value.join(', ') : value);
+    if (useBrackets) {
+    result += '}';
+    }
+  });
 
-    result += '\n}';
+  result += '\n}';
 
-    return result;
+  return result;
   };
 
   getURL() {
-    return this.bib.tags.url;
+  return this.bib.tags.url;
   }
 }
 
-class Code extends Component {
-  render() {
-    return (
-      <pre className="bibtex-code text-left"><code>{this.props.children}</code></pre>
-    );
-  }
-}
-
-Code.propTypes = {
-  children: PropTypes.string.isRequired
-};
-
-
-function getDomain() {
-  if (process.env.NODE_ENV !== 'production') {
-    return 'http://localhost:3001';
-  } else {
-    return '';
-  }
-}
+/* PAGE DISPLAY */
 
 const BIB = '/bib/';
+const URL_PATHNAME = window.location.pathname
+const URL_DOI = (URL_PATHNAME.startsWith(BIB)) ? URL_PATHNAME.substring(BIB.length) : ''
+const divResult = document.getElementById("result")
+const inputBibInput = document.getElementById("bibInput")
 
-class Doi2Bib extends Component {
-  constructor(props) {
-    super(props);
-    let doiInUrl = '';
-    if (props.location.pathname.startsWith(BIB)) {
-      doiInUrl = props.location.pathname.substring(BIB.length);
-    }
-    this.state = {
-      value: doiInUrl
-    };
-
-    this.handleChange = this.handleChange.bind(this);
-    this.handleSubmit = this.handleSubmit.bind(this);
-    this.handleKeyPress = this.handleKeyPress.bind(this);
-    this.copyBibToClipboard = this.copyBibToClipboard.bind(this);
-    this.copyUrlToClipboard = this.copyUrlToClipboard.bind(this);
-  }
-
-  componentDidMount() {
-    if (this.state.value) {
-      this.generateBib(false);
-    }
-    window.scrollTo(0, 0);
-  }
-
-  handleChange(event) {
-    this.setState({value: event.target.value});
-  }
-
-  handleKeyPress(event) {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      this.generateBib(true);
-    }
-  }
-
-  handleSubmit(event) {
-    event.preventDefault();
-    this.generateBib(true);
-  }
-
-  copyToCipboard(event, text) {
-    const el = document.createElement('textarea');
-    el.value = text;
-    el.setAttribute('readonly', '');
-    el.style.position = 'absolute';
-    el.style.left = '-9999px';
-    document.body.appendChild(el);
-    el.select();
-    document.execCommand('copy');
-    document.body.removeChild(el);
-    event.target.focus();
-  }
-
-  copyBibToClipboard(event) {
-    this.copyToCipboard(event, this.state.bib);
-  }
-
-  copyUrlToClipboard(event) {
-    this.copyToCipboard(event, this.state.url);
-  }
-
-  generateBib(changeBrowserURL) {
-    let idToSend = this.state.value;
-    let url;
-
-    this.setState({
-      bib: null,
-      url: null,
-      error: null,
-      workInProgress: true
-    });
-
-    idToSend = idToSend.replace(/ /g, '');
-
-    if (idToSend.match(/^(doi:|(https?:\/\/)?(dx\.)?doi\.org\/)?10\..+\/.+$/i)) {
-      if (idToSend.match(/^doi:/i)) {
-        idToSend = idToSend.substring(4);
-      } else if (idToSend.indexOf('doi.org/') >= 0) {
-				idToSend = idToSend.substr(idToSend.indexOf('doi.org/') + 8)
-			}
-
-      url = '/2/doi2bib';
-    } else if (idToSend.match(/^\d+$|^PMC\d+(\.\d+)?$/)) {
-      url = '/2/pmid2bib';
-    }
-    else if (idToSend.match(/^(arxiv:)?\d+\.\d+(v(\d+))?/i)) {
-      if (idToSend.match(/^arxiv:/i)) {
-        idToSend = idToSend.substring(6);
-      }
-      url = '/2/arxivid2bib';
-    }
-
-    if(url) {
-      fetch(getDomain() + url + '?id=' + idToSend)
-        .then(response => {
-          if (!response.ok) {
-            return response.text().then(Promise.reject.bind(Promise));
-          } else {
-            return response.text();
-          }
-        })
-        .then(data => {
-          let bib = new Bib(data);
-          this.setState({
-            bib: bib.toPrettyString(),
-            url: bib.getURL(),
-            workInProgress: false
-          });
-          if (changeBrowserURL) {
-            this.props.history.push('/bib/' + this.state.value);
-          }
-        }, data => {
-          this.setState({
-            error: data,
-            workInProgress: false
-          });
-        });
-    } else {
-      this.setState({
-        error: 'Invalid ID. Must be DOI, PMID, or arXiv ID (after 2007).',
-        workInProgress: false
-      });
-    }
-  }
-
-  render() {
-    return (
-      <div className="text-center">
-        <div className="row margin-top">
-          <div className="col">
-            <img src={logo} alt="doi2bib_logo" height="60" width="60" />
-          </div>
-        </div>
-        <div className="row margin-top">
-          <div className="offset-md-2 col-md-8">
-            <h2>doi2bib &#8212; give us a DOI<br/>and we will do our best to get you the BibTeX entry</h2>
-          </div>
-        </div>
-        <div className="row margin-top">
-          <div className="offset-md-2 col-md-8">
-            <form name="bibForm">
-              <div className="input-group">
-                <input type="text"
-                      className={'form-control' + (this.state.error ? ' is-invalid' : '')}
-                      maxLength="100"
-                      onChange={this.handleChange}
-                      onKeyPress={this.handleKeyPress}
-                      value={this.state.value}
-                      placeholder="Enter a doi, PMCID, or arXiv ID"
-                      autoFocus/>
-                <span className="input-group-btn">
-                  <button type="button" className="btn btn-light" onClick={this.handleSubmit}>get BibTeX</button>
-                </span>
-              </div>
-            </form>
-          </div>
-        </div>
-        <div className="row margin-top">
-          <div className="offset-md-2 col-md-8">
-            { this.state.workInProgress && <i className="fa fa-refresh fa-spin"></i> }
-            { this.state.bib && <Code ref={(el) => this.bibArea = el}>{this.state.bib}</Code> }
-            { this.state.url && <a href={this.state.url} target="_blank" ref={(el) => this.urlArea = el}>{this.state.url}</a> }
-            { this.state.error && <pre className="text-danger text-left">{this.state.error}</pre> }
-          </div>
-        </div>
-        {
-          this.state.bib && this.state.url &&
-          <div className="row">
-            <div className="offset-md-2 col-md-8">
-              <button className="copy-button btn btn-light" onClick={this.copyBibToClipboard}>Copy Bib to Clipboard</button>
-              <button className="copy-button btn btn-light" onClick={this.copyUrlToClipboard}>Copy URL to Clipboard</button>
-            </div>
-          </div>
-        }
-      </div>
-    );
-  }
+const resultProceed = () => {
+  inputBibInput.classList.remove("is-invalid")
+  divResult.innerHTML = '<i className="fa fa-refresh fa-spin"></i>'
+}
+const resultSuccess = (bib, url) => {
+  inputBibInput.classList.remove("is-invalid")
+  divResult.innerHTML = '<pre className="bibtex-code text-left"><code>' + bib + '</code></pre>'
+            + '<a href="' + url + '" target="_blank">' + url + '</a>'
+}
+const resultFailure = (error) => {
+  inputBibInput.classList.add("is-invalid")
+  divResult.innerHTML = '<pre className="text-danger text-left">' + error + '</pre>'
 }
 
-class App extends Component {
-  render() {
-    return (
-      <BrowserRouter>
-        <div>
-          <div className="container">
-            <Switch>
-              <Route path="/bib/*" component={Doi2Bib} />
-              <Route path="*" component={Doi2Bib} />
-            </Switch>
-          </div>
-        </div>
-      </BrowserRouter>
-    );
-  }
+const processResponse = data => {
+  let bib = new Bib(data);
+  resultSuccess(bib.toPrettyString(), bib.getURL())
 }
 
+const generateBib = (bibID) => {
+  bibID = bibID.replace(/ /g, '');
+  resultProceed()
 
-ReactDOM.render(<App />, document.getElementById('root'));
-registerServiceWorker();
+  if (bibID.match(/^10\..+\/.+$/i)) {
+    doi2bib(bibID).then(processResponse).catch(resultFailure)
+  } else if (bibID.match(/^doi:?10\..+\/.+$/i)) {
+    bibID = bibID.substring(4);
+    doi2bib(bibID).then(processResponse).catch(resultFailure)
+  } else if (bibID.match(/^(https?:\/\/)?(dx\.)?doi\.org\/10\..+\/.+$/i)) {
+    bibID = bibID.substr(bibID.indexOf('doi.org/') + 8)
+    doi2bib(bibID).then(processResponse).catch(resultFailure)
+  } else if (bibID.match(/^\d+$|^PMC\d+(\.\d+)?$/)) {
+    pmid2doi(bibID).then(processResponse).catch(resultFailure)
+  } else if (bibID.match(/^arxiv:\d+\.\d+(v(\d+))?/i)) {
+    bibID = bibID.substring(6);
+    arxivid2doi(bibID).then(processResponse).catch(resultFailure)
+  } else if (bibID.match(/^\d+\.\d+(v(\d+))?/i)) {
+    arxivid2doi(bibID).then(processResponse).catch(resultFailure)
+  } else {
+    bibID = ''
+    resultFailure('Invalid ID. Must be DOI, PMID, or arXiv ID (after 2007).')
+  }
+  return bibID
+  }
+
+const handleSubmit = (event) => {
+  event.preventDefault();
+  const bibID = generateBib();
+  if (bibID) window.history.push(BIB + bibID);
+}
+const handleKeyPress = (event) => if (event.key === 'Enter') handleSubmit(event)
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (URL_DOI) generateBib(URL_DOI)
+})
