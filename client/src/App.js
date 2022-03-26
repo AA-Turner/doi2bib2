@@ -4,8 +4,7 @@ import PropTypes from 'prop-types';
 
 import Bib from './utils/Bib.js';
 import logo from './components/doi2bib-logo.png';
-import './components/Code.css';
-import './App.css';
+import './code.css';
 
 class Code extends Component {
   render() {
