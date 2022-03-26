@@ -1,21 +1,17 @@
 'use strict';
 
-const
-  request = require('request'),
-  parseString = require('xml2js').parseString;
+const parseString = require('xml2js').parseString;
 
-function doi2bibOptions(doi) {
+const doi2bibOptions = (doi) => {
   return {
     url: 'https://doi.org/' + doi,
-    headers: {
-      'Accept': 'application/x-bibtex; charset=utf-8'
-    }
-  };
+    headers: {'Accept': 'application/x-bibtex; charset=utf-8'}
+  }
 }
 
 function doi2bib(doi) {
   return new Promise((resolve, reject) => {
-    request(doi2bibOptions(doi), function(error, response, body) {
+    fetch(doi2bibOptions(doi)).then(response => {
       if (response.statusCode === 200) {
         resolve(body);
       } else {
@@ -25,17 +21,15 @@ function doi2bib(doi) {
   });
 }
 
-function pmid2doiOptions(pimd) {
-  var options = {
+const pmid2doiOptions = (pmid) => {
+  return {
     url: 'http://www.pubmedcentral.nih.gov/utils/idconv/v1.0/?format=json&ids=' + pimd,
-    json: true
-  };
-  return options;
+  }
 }
 
 function pmid2doi(pmid) {
   return new Promise((resolve, reject) => {
-    request(pmid2doiOptions(pmid), function(error, response, body) {
+    fetch(pmid2doiOptions(pmid)).then(response => {
       if (response.statusCode !== 200) {
         reject(response.statusCode);
       } else if (!body.records || !body.records[0]) {
@@ -47,16 +41,15 @@ function pmid2doi(pmid) {
   });
 }
 
-function arxivid2doiOptions(arxivid) {
-  var options = {
+const arxivid2doiOptions = (arxivid) => {
+  return {
     url: 'http://export.arxiv.org/api/query?id_list=' + arxivid
-  };
-  return options;
+  }
 }
 
 function arxivid2doi(arxivid) {
   return new Promise((resolve, reject) => {
-    request(arxivid2doiOptions(arxivid), function(error, response, body) {
+    fetch(arxivid2doiOptions(arxivid)).then(response => {
       if (response.statusCode !== 200) {
         reject(response.statusCode);
       } else if (!body) {
@@ -73,7 +66,6 @@ function arxivid2doi(arxivid) {
       }});
     });
 }
-
 
 module.exports = {
   doi2bib: doi2bib,
