@@ -1,8 +1,22 @@
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
+
 import Bib from '../utils/Bib.js';
 import logo from './doi2bib-logo.png';
+import './Code.css';
 
-import Code from './Code.js';
+class Code extends Component {
+  render() {
+    return (
+      <pre className="bibtex-code text-left"><code>{this.props.children}</code></pre>
+    );
+  }
+}
+
+Code.propTypes = {
+  children: PropTypes.string.isRequired
+};
+
 
 function getDomain() {
   if (process.env.NODE_ENV !== 'production') {
