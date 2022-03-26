@@ -1,5 +1,3 @@
-import Bibparser from './bibparser.jison';
-
 /* REQUESTS */
 
 const doi2bib = (doi) => fetch('https://doi.org/' + doi, {headers: {'Accept': 'application/x-bibtex; charset=utf-8'}}).then(response => {
@@ -37,6 +35,21 @@ const SPECIAL_CHARS = {
   'Ü': '\\"{U}'
 };
 
+const MONTHS = {
+  "jan": "01",
+  "feb": "02",
+  "mar": "03",
+  "apr": "04",
+  "may": "05",
+  "jun": "06",
+  "jul": "07",
+  "aug": "08",
+  "sep": "09",
+  "oct": "10",
+  "nov": "11",
+  "dec": "12",
+}
+
 /**
  * Sometimes, the greek chars aren't properlty formatted in the received bib.
  * e.g. the bib for 10.1002/cncr.29046 contains {\varEpsilon} instead of {$\varEpsilon$}.
@@ -49,67 +62,37 @@ const encodeSpecialChars = (str) => str.replace(
   (matched) => SPECIAL_CHARS[matched]
 );
 
-export default class Bib {
-  constructor(bibStr) {
-  this.bib = Bibparser.parse(bibStr);
+const parseBibTex = (bibTexText) => {
+  parsed = Bibparser.parse(bibStr);
 
-  if (this.bib.tags.pages === 'n/a-n/a') {
-    delete this.bib.tags.pages;
-  }
-  if (this.bib.tags.pages && this.bib.tags.pages.indexOf('--') === -1) {
-    this.bib.tags.pages = this.bib.tags.pages.replace(/-/g, '--');
+  if (parsed.tags.pages === 'n/a-n/a') {delete parsed.tags.pages;
+  if (parsed.tags.pages && parsed.tags.pages.indexOf('--') === -1) {
+    parsed.tags.pages = parsed.tags.pages.replace(/-/g, '--');
   }
 
   /* id specific */
-  if (this.bib.id) {
-    this.bib.id = this.bib.id.replace(/_/g, '');
-  }
+  if (parsed.id) parsed.id = parsed.id.replace(/_/g, '');
 
   // bib url contains url encoding -> we decode those characters here
-  if (this.bib.tags.url) {
-    this.bib.tags.url = decodeURIComponent(this.bib.tags.url);
-  }
+  if (parsed.tags.url) parsed.tags.url = decodeURIComponent(parsed.tags.url);
+  
+  const title = parsed.tags.title
+  if (title) parsed.tags.title = (Array.isArray(title)) ? title.map(t => insertDollars(t)) : insertDollars(title);
+  parsed.tags.date = parsed.tags.year + "-" + MONTHS[parsed.tags.month]
+  delete parsed.tags.year;
+  delete parsed.tags.month;
 
-  if (this.bib.tags.title) {
-    if (Array.isArray(this.bib.tags.title)) {
-    this.bib.tags.title = this.bib.tags.title.map(t => insertDollars(t))
-    } else {
-    this.bib.tags.title = insertDollars(this.bib.tags.title);
-    }
-  }
-
-  // remove brackets from month
-  console.log(bibStr);
-  console.log(this.bib.tags.month);
-  }
-
-  toPrettyString() {
-  var result;
-
-  result = '@' + this.bib.type + '{' + this.bib.id;
-
-  Object.keys(this.bib.tags).forEach(key => {
-    const useBrackets = !['month'].includes(key);
-    const value = this.bib.tags[key];
-    result += ',\n  ' + key + ' = ';
-    if (useBrackets) {
-    result += '{';
-    }
-    result += encodeSpecialChars(value.join ? value.join(', ') : value);
-    if (useBrackets) {
-    result += '}';
-    }
-  });
-
-  result += '\n}';
-
-  return result;
-  };
-
-  getURL() {
-  return this.bib.tags.url;
-  }
+  return parsed
 }
+
+const renderBibLaTex = (parsed) => {
+  let result = '@' + parsed.type + '{' + parsed.id;
+  for (const [key, value] of parsed.tags) result += ',\n  ' + key + ' = {' + encodeSpecialChars(value.join ? value.join(', ') : value) + '}';
+  return result + '\n}';
+};
+
+const getURLFromParsedBib = (parsed) => parsed.tags.url;
+
 
 /* PAGE DISPLAY */
 
@@ -134,8 +117,8 @@ const resultFailure = (error) => {
 }
 
 const processResponse = data => {
-  let bib = new Bib(data);
-  resultSuccess(bib.toPrettyString(), bib.getURL())
+  const parsed = parseBibTex(data);
+  resultSuccess(renderBibLaTex(parsed), getURLFromParsedBib(parsed))
 }
 
 const generateBib = (bibID) => {

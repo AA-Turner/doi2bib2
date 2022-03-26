@@ -1,4 +1,6 @@
-/* description: Parses end executes mathematical expressions. */
+/* description: Parses end executes mathematical expressions. 
+   run "npm install jison -g; jison bibparser.jison" to regenerate bibparser.js
+*/
 
 /* lexical grammar */
 %lex
