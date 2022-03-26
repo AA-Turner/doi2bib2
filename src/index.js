@@ -8,8 +8,27 @@ import registerServiceWorker from './registerServiceWorker';
 
 import 'bootstrap/dist/css/bootstrap.css';
 import 'font-awesome/css/font-awesome.css';
-import './code.css';
 import './index.css';
+
+
+const doi2bib = (doi) => fetch('https://doi.org/' + doi, {headers: {'Accept': 'application/x-bibtex; charset=utf-8'}}).then(response => {
+  if (!response.ok) throw new Error(response.statusCode);
+  return response.text()
+});
+
+const pmid2doi = (pmid) => fetch('https://www.pubmedcentral.nih.gov/utils/idconv/v1.0/?format=json&ids=' + pmid).then(response => {
+  if (!response.ok) throw new Error(response.statusCode);
+  return response.json()
+}).then(body => {
+  if (!body.records || !body.records[0]) throw new Error(204); // not found
+  return doi2bib(body.records[0].doi)
+});
+
+const arxivid2doi = (arxivid) => fetch('https://arxiv.org/bibtex/' + arxivid).then(response => {
+  if (!response.ok) throw new Error(response.statusCode);
+  return response.text()
+})
+
 
 class Code extends Component {
   render() {
