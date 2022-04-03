@@ -91,7 +91,7 @@ const encodeBibTeXValue = (value) => encodeSpecialChars(value.join ? value.join(
 
 const renderBibLaTex = (parsed) => {
   const attributes = Object.keys(parsed.tags).sort().map(key => `  ${key} = {${encodeBibTeXValue(parsed.tags[key])}},`)
-  return [`@${parsed.type}{${parsed.id}`, ...attributes, '}'].join("\n")
+  return [`@${parsed.type}{${parsed.id.replace("_", "")}`, ...attributes, '}'].join("\n")
 }
 
 const getURLFromParsedBib = (parsed) => parsed.tags.url;
@@ -99,9 +99,7 @@ const getURLFromParsedBib = (parsed) => parsed.tags.url;
 
 /* PAGE DISPLAY */
 
-const BIB = '/bib/';
 const URL_PATHNAME = window.location.pathname
-const URL_DOI = (URL_PATHNAME.startsWith(BIB)) ? URL_PATHNAME.substring(BIB.length) : ''
 const divResult = document.getElementById("result")
 const inputBibInput = document.getElementById("bibInput")
 
@@ -119,11 +117,11 @@ const resultFailure = (error) => {
 }
 
 const handler = (func, bibID) => {
-	func(bibID).then(data => {
-		const parsed = parseBibTex(data);
-		resultSuccess(renderBibLaTex(parsed), getURLFromParsedBib(parsed))
-	}).catch(resultFailure)
-	return bibID
+  func(bibID).then(data => {
+    const parsed = parseBibTex(data);
+    resultSuccess(renderBibLaTex(parsed), getURLFromParsedBib(parsed))
+  }).catch(resultFailure)
+  return bibID
 }
 
 const generateBib = (bibID) => {
@@ -160,10 +158,15 @@ const generateBib = (bibID) => {
 
 const handleSubmit = () => {
   const bibID = generateBib(inputBibInput.value);
-  if (bibID) window.history.push(BIB + bibID);
+  if (bibID) {
+    const url = new URL(window.location)
+    url.searchParams.set("bib", bibID)
+    window.history.pushState({}, "", url);
+  }
 }
 const handleKeyPress = (event) => {if (event.key === 'Enter') {handleSubmit(event)}}
 
 document.addEventListener("DOMContentLoaded", () => {
-  if (URL_DOI) generateBib(URL_DOI)
+  const url_doi = new URLSearchParams(window.location.search).get("bib")
+  if (url_doi) generateBib(url_doi)
 })
