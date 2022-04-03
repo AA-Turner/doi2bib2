@@ -63,9 +63,9 @@ const encodeSpecialChars = (str) => str.replace(
 );
 
 const parseBibTex = (bibTexText) => {
-  parsed = Bibparser.parse(bibStr);
+  parsed = bibparser.parse(bibTexText);
 
-  if (parsed.tags.pages === 'n/a-n/a') {delete parsed.tags.pages;
+  if (parsed.tags.pages === 'n/a-n/a') delete parsed.tags.pages;
   if (parsed.tags.pages && parsed.tags.pages.indexOf('--') === -1) {
     parsed.tags.pages = parsed.tags.pages.replace(/-/g, '--');
   }
@@ -81,15 +81,18 @@ const parseBibTex = (bibTexText) => {
   parsed.tags.date = parsed.tags.year + "-" + MONTHS[parsed.tags.month]
   delete parsed.tags.year;
   delete parsed.tags.month;
+  
+  parsed.tags
 
   return parsed
 }
 
+const encodeBibTeXValue = (value) => encodeSpecialChars(value.join ? value.join(', ') : value)
+
 const renderBibLaTex = (parsed) => {
-  let result = '@' + parsed.type + '{' + parsed.id;
-  for (const [key, value] of parsed.tags) result += ',\n  ' + key + ' = {' + encodeSpecialChars(value.join ? value.join(', ') : value) + '}';
-  return result + '\n}';
-};
+  const attributes = Object.keys(parsed.tags).sort().map(key => `  ${key} = {${encodeBibTeXValue(parsed.tags[key])}},`)
+  return [`@${parsed.type}{${parsed.id}`, ...attributes, '}'].join("\n")
+}
 
 const getURLFromParsedBib = (parsed) => parsed.tags.url;
 
@@ -104,55 +107,62 @@ const inputBibInput = document.getElementById("bibInput")
 
 const resultProceed = () => {
   inputBibInput.classList.remove("is-invalid")
-  divResult.innerHTML = '<i className="fa fa-refresh fa-spin"></i>'
+  divResult.innerHTML = '<i></i>'
 }
 const resultSuccess = (bib, url) => {
-  inputBibInput.classList.remove("is-invalid")
-  divResult.innerHTML = '<pre className="bibtex-code text-left"><code>' + bib + '</code></pre>'
+  divResult.innerHTML = '<pre class="bibtex-code"><code>' + bib + '</code></pre>'
             + '<a href="' + url + '" target="_blank">' + url + '</a>'
 }
 const resultFailure = (error) => {
   inputBibInput.classList.add("is-invalid")
-  divResult.innerHTML = '<pre className="text-danger text-left">' + error + '</pre>'
+  divResult.innerHTML = '<pre class="text-danger text-left">' + error + '</pre>'
 }
 
-const processResponse = data => {
-  const parsed = parseBibTex(data);
-  resultSuccess(renderBibLaTex(parsed), getURLFromParsedBib(parsed))
+const handler = (func, bibID) => {
+	func(bibID).then(data => {
+		const parsed = parseBibTex(data);
+		resultSuccess(renderBibLaTex(parsed), getURLFromParsedBib(parsed))
+	}).catch(resultFailure)
+	return bibID
 }
 
 const generateBib = (bibID) => {
   bibID = bibID.replace(/ /g, '');
   resultProceed()
 
+  // DOI
   if (bibID.match(/^10\..+\/.+$/i)) {
-    doi2bib(bibID).then(processResponse).catch(resultFailure)
-  } else if (bibID.match(/^doi:?10\..+\/.+$/i)) {
-    bibID = bibID.substring(4);
-    doi2bib(bibID).then(processResponse).catch(resultFailure)
-  } else if (bibID.match(/^(https?:\/\/)?(dx\.)?doi\.org\/10\..+\/.+$/i)) {
-    bibID = bibID.substr(bibID.indexOf('doi.org/') + 8)
-    doi2bib(bibID).then(processResponse).catch(resultFailure)
-  } else if (bibID.match(/^\d+$|^PMC\d+(\.\d+)?$/)) {
-    pmid2doi(bibID).then(processResponse).catch(resultFailure)
-  } else if (bibID.match(/^arxiv:\d+\.\d+(v(\d+))?/i)) {
-    bibID = bibID.substring(6);
-    arxivid2doi(bibID).then(processResponse).catch(resultFailure)
-  } else if (bibID.match(/^\d+\.\d+(v(\d+))?/i)) {
-    arxivid2doi(bibID).then(processResponse).catch(resultFailure)
-  } else {
-    bibID = ''
-    resultFailure('Invalid ID. Must be DOI, PMID, or arXiv ID (after 2007).')
+    return handler(doi2bib, bibID)
   }
-  return bibID
+  if (bibID.match(/^doi:?10\..+\/.+$/i)) {
+    return handler(doi2bib, bibID.substring(4))
   }
+  if (bibID.match(/^(https?:\/\/)?(dx\.)?doi\.org\/10\..+\/.+$/i)) {
+    return handler(doi2bib, bibID.substr(bibID.indexOf('doi.org/') + 8))
+  }
+  
+  // pubMed ID
+  if (bibID.match(/^\d+$|^PMC\d+(\.\d+)?$/)) {
+    return handler(pmid2doi, bibID)
+  }
+  
+  // arXiv ID
+  if (bibID.match(/^arxiv:\d+\.\d+(v(\d+))?/i)) {
+    return handler(arxivid2doi, bibID.substring(6))
+  }
+  if (bibID.match(/^\d+\.\d+(v(\d+))?/i)) {
+    return handler(arxivid2doi, bibID)
+  } 
 
-const handleSubmit = (event) => {
-  event.preventDefault();
-  const bibID = generateBib();
+  resultFailure('Invalid ID. Must be DOI, PMID, or arXiv ID (after 2007).')
+  return ''
+}
+
+const handleSubmit = () => {
+  const bibID = generateBib(inputBibInput.value);
   if (bibID) window.history.push(BIB + bibID);
 }
-const handleKeyPress = (event) => if (event.key === 'Enter') handleSubmit(event)
+const handleKeyPress = (event) => {if (event.key === 'Enter') {handleSubmit(event)}}
 
 document.addEventListener("DOMContentLoaded", () => {
   if (URL_DOI) generateBib(URL_DOI)
