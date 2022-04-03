@@ -8,7 +8,6 @@ const $V1 = [10, 11];
 const $V2 = [2, 10];
 const $V3 = [1, 17];
 const bibparser = {
-  trace: function trace() {},
   yy: {},
   symbols_: {
     error: 2,
@@ -133,14 +132,8 @@ const bibparser = {
     o($V1, [2, 7]),
   ],
   defaultActions: { 4: [2, 2] },
-  parseError: function parseError(str, hash) {
-    if (hash.recoverable) {
-      this.trace(str);
-    } else {
-      var error = new Error(str);
-      error.hash = hash;
-      throw error;
-    }
+  parseError: (str) => {
+    throw new Error(str);
   },
   parse: function parse(input) {
     var self = this,
@@ -238,13 +231,7 @@ const bibparser = {
               ? "end of input"
               : "'" + (this.terminals_[symbol] || symbol) + "'");
         }
-        this.parseError(errStr, {
-          text: lexer.match,
-          token: this.terminals_[symbol] || symbol,
-          line: lexer.yylineno,
-          loc: yyloc,
-          expected: expected,
-        });
+        this.parseError(errStr);
       }
       if (action[0] instanceof Array && action.length > 1) {
         throw new Error(
@@ -417,12 +404,7 @@ const bibparser = {
           "Lexical error on line " +
             (this.yylineno + 1) +
             ". You can only invoke reject() in the lexer when the lexer is of the backtracking persuasion (options.backtrack_lexer = true).\n" +
-            this.showPosition(),
-          {
-            text: "",
-            token: null,
-            line: this.yylineno,
-          }
+            this.showPosition()
         );
       }
       return this;
@@ -588,12 +570,7 @@ const bibparser = {
           "Lexical error on line " +
             (this.yylineno + 1) +
             ". Unrecognized text.\n" +
-            this.showPosition(),
-          {
-            text: "",
-            token: null,
-            line: this.yylineno,
-          }
+            this.showPosition()
         );
       }
     },
