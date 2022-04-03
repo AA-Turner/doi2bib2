@@ -50,16 +50,10 @@ const bibparser = {
     [14, 2],
     [14, 0],
   ],
-  performAction: function anonymous(
-    yytext,
-    yyleng,
-    yylineno,
-    yy,
-    yystate /* action[1] */,
-    $$ /* vstack */,
-    _$ /* lstack */
-  ) {
-    /* this == yyval */
+  performAction: function anonymous(yystate, $$) {
+    /* this === yyval */
+    /* yystate === action[1] */
+    /* $$ === vstack */
 
     var $0 = $$.length - 1;
     switch (yystate) {
@@ -161,7 +155,6 @@ const bibparser = {
       recovering = 0,
       TERROR = 2,
       EOF = 1;
-    var args = lstack.slice.call(arguments, 1);
     var lexer = Object.create(this.lexer);
     var sharedState = { yy: {} };
     for (var k in this.yy) {
@@ -183,7 +176,7 @@ const bibparser = {
     } else {
       this.parseError = Object.getPrototypeOf(this).parseError;
     }
-    function popStack(n) {
+    const popStack = (n) => {
       stack.length = stack.length - 2 * n;
       vstack.length = vstack.length - n;
       lstack.length = lstack.length - n;
@@ -296,18 +289,7 @@ const bibparser = {
               lstack[lstack.length - 1].range[1],
             ];
           }
-          r = this.performAction.apply(
-            yyval,
-            [
-              yytext,
-              yyleng,
-              yylineno,
-              sharedState.yy,
-              action[1],
-              vstack,
-              lstack,
-            ].concat(args)
-          );
+          r = this.performAction.apply(yyval, [action[1], vstack]);
           if (typeof r !== "undefined") {
             return r;
           }
@@ -536,10 +518,7 @@ const bibparser = {
       this._backtrack = false;
       this._input = this._input.slice(match[0].length);
       this.matched += match[0];
-      token = this.performAction.call(
-        this,
-        this.yy,
-        this,
+      token = this.performAction(
         indexed_rule,
         this.conditionStack[this.conditionStack.length - 1]
       );
@@ -679,8 +658,6 @@ const bibparser = {
     },
     options: {},
     performAction: function anonymous(
-      yy,
-      yy_,
       $avoiding_name_collisions,
       YY_START
     ) {
