@@ -20,8 +20,8 @@
 			<h2>doi2bib &mdash; give us a DOI and we will do our best to get you the BibLaTeX entry</h2>
         </div>
         <div class="row content-row">
-            <form name="bibForm">
-                <input id="bibInput" type="text" maxLength="500" onKeyPress="handleKeyPress" placeholder="Enter a doi, PMCID, or arXiv ID" autoFocus/>
+            <form name="bibForm" method="get">
+                <input name="bib" id="bibInput" type="text" maxLength="500" placeholder="Enter a doi, PMCID, or arXiv ID" autoFocus/>
                 <button id="btn" type="button" onClick="handleSubmit()">get BibTeX</button>
             </form>
         </div>

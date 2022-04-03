@@ -156,17 +156,21 @@ const generateBib = (bibID) => {
   return ''
 }
 
+const getNewURL = (bibID) => {
+	const url = new URL(window.location)
+    url.searchParams.set("bib", bibID)
+    return url
+}
+
 const handleSubmit = () => {
   const bibID = generateBib(inputBibInput.value);
-  if (bibID) {
-    const url = new URL(window.location)
-    url.searchParams.set("bib", bibID)
-    window.history.pushState({}, "", url);
-  }
+  if (bibID) window.history.pushState({}, "", getNewURL(bibID));
 }
-const handleKeyPress = (event) => {if (event.key === 'Enter') {handleSubmit(event)}}
 
 document.addEventListener("DOMContentLoaded", () => {
   const url_doi = new URLSearchParams(window.location.search).get("bib")
-  if (url_doi) generateBib(url_doi)
+  if (url_doi) {
+    const bibID = generateBib(url_doi)
+    if (url_doi !== bibID) window.history.replaceState({}, "", getNewURL(bibID));
+  }
 })
