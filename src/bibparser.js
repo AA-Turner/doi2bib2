@@ -173,7 +173,7 @@ const bibparser = {
       stack.length = stack.length - 2 * n;
       vstack.length = vstack.length - n;
       lstack.length = lstack.length - n;
-    }
+    };
     _token_stack: var lex = function () {
       var token;
       token = lexer.lex() || EOF;
@@ -634,10 +634,7 @@ const bibparser = {
       return this.conditionStack.length;
     },
     options: {},
-    performAction: function anonymous(
-      $avoiding_name_collisions,
-      YY_START
-    ) {
+    performAction: function anonymous($avoiding_name_collisions, YY_START) {
       var YYSTATE = YY_START;
       switch ($avoiding_name_collisions) {
         case 0 /*return 'WS'*/:
