@@ -42,60 +42,58 @@ const bibparser = {
     [14, 2],
     [14, 0],
   ],
-  performAction: function anonymous(yystate, $$) {
-    /* this === yyval */
+  performAction: (yyval, yystate, vstack) => {
     /* yystate === action[1] */
-    /* $$ === vstack */
 
-    var $0 = $$.length - 1;
+    var $0 = vstack.length - 1;
     switch (yystate) {
       case 1:
-        return $$[$0];
+        return vstack[$0];
         break;
       case 2:
-        return $$[$0 - 1];
+        return vstack[$0 - 1];
         break;
       case 3:
-        this.$ = {
-          type: $$[$0 - 4],
-          id: $$[$0 - 2],
-          tags: $$[$0 - 1],
+        yyval.$ = {
+          type: vstack[$0 - 4],
+          id: vstack[$0 - 2],
+          tags: vstack[$0 - 1],
         };
 
         break;
       case 4:
-        if ($$[$0 - 1].length === 1) {
-          $$[$0 - 6][$$[$0 - 4].trim()] = $$[$0 - 1][0];
+        if (vstack[$0 - 1].length === 1) {
+          vstack[$0 - 6][vstack[$0 - 4].trim()] = vstack[$0 - 1][0];
         } else {
-          $$[$0 - 6][$$[$0 - 4].trim()] = $$[$0 - 1];
+          vstack[$0 - 6][vstack[$0 - 4].trim()] = vstack[$0 - 1];
         }
-        this.$ = $$[$0 - 6];
+        yyval.$ = vstack[$0 - 6];
 
         break;
       case 5:
-        $$[$0 - 4][$$[$0 - 2].trim()] = $$[$0];
-        this.$ = $$[$0 - 4];
+        vstack[$0 - 4][vstack[$0 - 2].trim()] = vstack[$0];
+        yyval.$ = vstack[$0 - 4];
 
         break;
       case 6:
-        this.$ = {};
+        yyval.$ = {};
 
         break;
       case 7:
-        this.$ = $$[$0 - 2];
-        this.$.push($$[$0]);
+        yyval.$ = vstack[$0 - 2];
+        yyval.$.push(vstack[$0]);
 
         break;
       case 8:
-        this.$ = [$$[$0]];
+        yyval.$ = [vstack[$0]];
 
         break;
       case 9:
-        this.$ = [$$[$0 - 1], $$[$0]].join("");
+        yyval.$ = [vstack[$0 - 1], vstack[$0]].join("");
 
         break;
       case 10:
-        this.$ = "";
+        yyval.$ = "";
 
         break;
     }
@@ -261,7 +259,7 @@ const bibparser = {
               lstack[lstack.length - 1].range[1],
             ];
           }
-          r = this.performAction.apply(yyval, [action[1], vstack]);
+          r = this.performAction(yyval, action[1], vstack);
           if (typeof r !== "undefined") {
             return r;
           }
