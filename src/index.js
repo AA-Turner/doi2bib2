@@ -90,8 +90,8 @@ const parseBibTex = (bibTexText) => {
 const encodeBibTeXValue = (value) => encodeSpecialChars(value.join ? value.join(', ') : value)
 
 const renderBibLaTex = (parsed) => {
-  const attributes = Object.keys(parsed.tags).sort().map(key => `  ${key} = {${encodeBibTeXValue(parsed.tags[key])}},`)
-  return [`@${parsed.type}{${parsed.id.replace("_", "")}`, ...attributes, '}'].join("\n")
+  const attributes = Object.keys(parsed.tags).sort().map(key => `    ${key} = {${encodeBibTeXValue(parsed.tags[key])}},`)
+  return [`@${parsed.type}{${parsed.id.replace("_", "")},`, ...attributes, '}'].join("\n")
 }
 
 const getURLFromParsedBib = (parsed) => parsed.tags.url;
@@ -108,7 +108,7 @@ const resultProceed = () => {
   divResult.innerHTML = '<i></i>'
 }
 const resultSuccess = (bib, url) => {
-  divResult.innerHTML = '<pre class="bibtex-code"><code>' + bib + '</code></pre>'
+  divResult.innerHTML = '<pre class="bibtex-code">' + bib + '</pre>'
             + '<a href="' + url + '" target="_blank">' + url + '</a>'
 }
 const resultFailure = (error) => {
@@ -157,9 +157,9 @@ const generateBib = (bibID) => {
 }
 
 const getNewURL = (bibID) => {
-	const url = new URL(window.location)
-    url.searchParams.set("bib", bibID)
-    return url
+  const url = new URL(window.location)
+  url.searchParams.set("bib", bibID)
+  return url
 }
 
 const handleSubmit = () => {
@@ -170,6 +170,7 @@ const handleSubmit = () => {
 document.addEventListener("DOMContentLoaded", () => {
   const url_doi = new URLSearchParams(window.location.search).get("bib")
   if (url_doi) {
+    inputBibInput.value = url_doi
     const bibID = generateBib(url_doi)
     if (url_doi !== bibID) window.history.replaceState({}, "", getNewURL(bibID));
   }
